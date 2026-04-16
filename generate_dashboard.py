@@ -131,6 +131,7 @@ html = """<!DOCTYPE html>
       <thead>
         <tr>
           <th data-col="name">Coach Name <span class="arrow">&#9650;</span></th>
+          <th data-col="me" title="How many months this coach has been employed by Souled. Helps contextualize raw outcome counts &mdash; veteran coaches have had more time to accumulate outcomes.">Months Employed <span class="arrow">&#9650;</span></th>
           <th data-col="students" title="Number of students who had at least the minimum number of meetings with this coach">Students <span class="arrow">&#9650;</span></th>
           <th data-col="so" title="Students who became Shomer Shabbos">SO <span class="arrow">&#9650;</span></th>
           <th data-col="stam" title="Students who became Shomer Torah and Mitzvos">STAM <span class="arrow">&#9650;</span></th>
@@ -161,7 +162,7 @@ function compute(minMeetings, minSemMonths, minTotalMeetings, rateMetric) {
   });
 
   const coachMap = {};
-  DATA.coaches.forEach(function(c) { coachMap[c.i] = { id: c.i, name: c.n, studentMap: {} }; });
+  DATA.coaches.forEach(function(c) { coachMap[c.i] = { id: c.i, name: c.n, me: c.me, studentMap: {} }; });
 
   DATA.rels.forEach(function(r) {
     if (r.t >= minMeetings && coachMap[r.c] && (studentTotalMeetings[r.s] || 0) >= minTotalMeetings) {
@@ -209,7 +210,7 @@ function compute(minMeetings, minSemMonths, minTotalMeetings, rateMetric) {
     var rateNum = rateMetric === 'so' ? so : rateMetric === 'stam' ? stam : rateMetric === 'ay' ? ay : any;
     var rate = studentIds.length > 0 ? Math.round((rateNum / studentIds.length) * 100) : 0;
     results.push({
-      name: coach.name, id: coach.id,
+      name: coach.name, id: coach.id, me: coach.me,
       students: studentIds.length, so: so, stam: stam, ay: ay, any: any,
       rate: rate,
       details: studentDetails
@@ -270,7 +271,9 @@ function render() {
     var arrow = expandedCoach === r.id ? '&#9660; ' : '&#9654; ';
     var barWidth = maxRate > 0 ? Math.round((r.rate / maxRate) * 100) : 0;
     var rateColor = r.rate >= 20 ? '#2d9a4e' : r.rate >= 10 ? '#5bb975' : r.rate > 0 ? '#8fd4a8' : '#ccc';
+    var meDisplay = (r.me != null) ? Math.round(r.me) : '—';
     tr.innerHTML = '<td><span class="expand-btn" data-coach="' + r.id + '">' + arrow + esc(r.name) + '</span></td>'
+      + '<td>' + meDisplay + '</td>'
       + '<td>' + r.students + '</td>'
       + '<td>' + (r.so || '-') + '</td>'
       + '<td>' + (r.stam || '-') + '</td>'
@@ -283,7 +286,7 @@ function render() {
       var detailTr = document.createElement('tr');
       detailTr.className = 'student-detail';
       var detailTd = document.createElement('td');
-      detailTd.colSpan = 7;
+      detailTd.colSpan = 8;
       if (r.details.length === 0) {
         detailTd.innerHTML = '<div class="student-list"><em>No students meet the minimum meeting threshold.</em></div>';
       } else {
@@ -311,7 +314,7 @@ function render() {
   var rateMetric = document.getElementById('rateMetric').value;
   var totalRateNum = rateMetric === 'so' ? totals.so : rateMetric === 'stam' ? totals.stam : rateMetric === 'ay' ? totals.ay : totals.any;
   var totalRate = totals.students > 0 ? Math.round((totalRateNum / totals.students) * 100) : 0;
-  totTr.innerHTML = '<td>TOTAL (de-duplicated)</td><td>' + totals.students + '</td><td>' + totals.so + '</td><td>' + totals.stam + '</td><td>' + totals.ay + '</td><td>' + totals.any + '</td><td>' + totalRate + '%</td>';
+  totTr.innerHTML = '<td>TOTAL (de-duplicated)</td><td>&mdash;</td><td>' + totals.students + '</td><td>' + totals.so + '</td><td>' + totals.stam + '</td><td>' + totals.ay + '</td><td>' + totals.any + '</td><td>' + totalRate + '%</td>';
   tbody.appendChild(totTr);
 }
 
