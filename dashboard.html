@@ -88,6 +88,17 @@
       </div>
     </div>
     <div class="control-group">
+      <label>Outcome Rate Based On</label>
+      <div class="control-row">
+        <select id="rateMetric" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.95rem;">
+          <option value="any" selected>Any Outcome</option>
+          <option value="so">SO Only</option>
+          <option value="stam">STAM Only</option>
+          <option value="ay">AY Only</option>
+        </select>
+      </div>
+    </div>
+    <div class="control-group">
       <label>Minimum Total Meetings (any coach) to Include Student</label>
       <div class="control-row">
         <input type="range" id="minTotalMeetings" min="1" max="50" value="1">
@@ -132,7 +143,7 @@ const DATA = {"coaches":[{"i":"0035f00000HizlzAAB","n":"Alyssa Lindo"},{"i":"003
 let sortCol = 'rate', sortDir = -1;
 let expandedCoach = null;
 
-function compute(minMeetings, minSemMonths, minTotalMeetings) {
+function compute(minMeetings, minSemMonths, minTotalMeetings, rateMetric) {
   // First, compute total meetings per student across all coaches
   var studentTotalMeetings = {};
   DATA.rels.forEach(function(r) {
@@ -186,7 +197,8 @@ function compute(minMeetings, minSemMonths, minTotalMeetings) {
 
     studentDetails.sort(function(a, b) { return a.name.localeCompare(b.name); });
 
-    var rate = studentIds.length > 0 ? Math.round((any / studentIds.length) * 100) : 0;
+    var rateNum = rateMetric === 'so' ? so : rateMetric === 'stam' ? stam : rateMetric === 'ay' ? ay : any;
+    var rate = studentIds.length > 0 ? Math.round((rateNum / studentIds.length) * 100) : 0;
     results.push({
       name: coach.name, id: coach.id,
       students: studentIds.length, so: so, stam: stam, ay: ay, any: any,
@@ -214,13 +226,14 @@ function render() {
   var minM = parseFloat(document.getElementById('minMeetings').value);
   var minS = parseFloat(document.getElementById('minSemMonths').value);
   var minT = parseFloat(document.getElementById('minTotalMeetings').value);
+  var rateMetric = document.getElementById('rateMetric').value;
 
   // Sync number inputs
   document.getElementById('minMeetingsNum').value = minM;
   document.getElementById('minSemMonthsNum').value = minS;
   document.getElementById('minTotalMeetingsNum').value = minT;
 
-  var result = compute(minM, minS, minT);
+  var result = compute(minM, minS, minT, rateMetric);
   var rows = result.rows;
   var totals = result.totals;
 
@@ -247,7 +260,7 @@ function render() {
     var tr = document.createElement('tr');
     var arrow = expandedCoach === r.id ? '&#9660; ' : '&#9654; ';
     var barWidth = maxRate > 0 ? Math.round((r.rate / maxRate) * 100) : 0;
-    var rateColor = r.rate >= 30 ? '#2d9a4e' : r.rate >= 15 ? '#ea580c' : '#888';
+    var rateColor = r.rate >= 20 ? '#2d9a4e' : r.rate >= 10 ? '#5bb975' : r.rate > 0 ? '#8fd4a8' : '#ccc';
     tr.innerHTML = '<td><span class="expand-btn" data-coach="' + r.id + '">' + arrow + esc(r.name) + '</span></td>'
       + '<td>' + r.students + '</td>'
       + '<td>' + (r.so || '-') + '</td>'
@@ -286,7 +299,9 @@ function render() {
   // Totals row
   var totTr = document.createElement('tr');
   totTr.className = 'totals';
-  var totalRate = totals.students > 0 ? Math.round((totals.any / totals.students) * 100) : 0;
+  var rateMetric = document.getElementById('rateMetric').value;
+  var totalRateNum = rateMetric === 'so' ? totals.so : rateMetric === 'stam' ? totals.stam : rateMetric === 'ay' ? totals.ay : totals.any;
+  var totalRate = totals.students > 0 ? Math.round((totalRateNum / totals.students) * 100) : 0;
   totTr.innerHTML = '<td>TOTAL (de-duplicated)</td><td>' + totals.students + '</td><td>' + totals.so + '</td><td>' + totals.stam + '</td><td>' + totals.ay + '</td><td>' + totals.any + '</td><td>' + totalRate + '%</td>';
   tbody.appendChild(totTr);
 }
@@ -311,6 +326,9 @@ function render() {
     }
   });
 });
+
+// Rate metric dropdown
+document.getElementById('rateMetric').addEventListener('change', function() { render(); });
 
 // Sorting
 document.querySelectorAll('#mainTable thead th').forEach(function(th) {
