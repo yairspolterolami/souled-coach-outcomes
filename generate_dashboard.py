@@ -61,6 +61,10 @@ html = """<!DOCTYPE html>
   .student-list table { font-size: 0.85rem; }
   .student-list th { background: #eef0f2; padding: 6px 10px; font-size: 0.75rem; cursor: default; }
   .student-list td { padding: 6px 10px; }
+  .rate-cell { white-space: nowrap; }
+  .rate-bar-bg { display: inline-block; width: 60px; height: 14px; background: #eee; border-radius: 7px; vertical-align: middle; margin-right: 8px; overflow: hidden; }
+  .rate-bar { height: 100%; border-radius: 7px; transition: width 0.3s; }
+  .rate-val { font-weight: 700; font-size: 0.95rem; vertical-align: middle; }
   .data-note { text-align: center; color: #999; font-size: 0.8rem; margin-top: 16px; }
   @media (max-width: 768px) {
     .controls { flex-direction: column; gap: 16px; }
@@ -115,11 +119,12 @@ html = """<!DOCTYPE html>
       <thead>
         <tr>
           <th data-col="name">Coach Name <span class="arrow">&#9650;</span></th>
-          <th data-col="students">Total Students <span class="arrow">&#9650;</span></th>
+          <th data-col="students">Students <span class="arrow">&#9650;</span></th>
           <th data-col="so">SO <span class="arrow">&#9650;</span></th>
           <th data-col="stam">STAM <span class="arrow">&#9650;</span></th>
           <th data-col="ay">AY <span class="arrow">&#9650;</span></th>
           <th data-col="any">Any Outcome <span class="arrow">&#9650;</span></th>
+          <th data-col="rate" class="sorted">Outcome Rate <span class="arrow">&#9660;</span></th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -132,7 +137,7 @@ html = """<!DOCTYPE html>
 <script>
 const DATA = __DATA_PLACEHOLDER__;
 
-let sortCol = 'name', sortDir = 1;
+let sortCol = 'rate', sortDir = -1;
 let expandedCoach = null;
 
 function compute(minMeetings, minSemMonths, minTotalMeetings) {
@@ -189,9 +194,11 @@ function compute(minMeetings, minSemMonths, minTotalMeetings) {
 
     studentDetails.sort(function(a, b) { return a.name.localeCompare(b.name); });
 
+    var rate = studentIds.length > 0 ? Math.round((any / studentIds.length) * 100) : 0;
     results.push({
       name: coach.name, id: coach.id,
       students: studentIds.length, so: so, stam: stam, ay: ay, any: any,
+      rate: rate,
       details: studentDetails
     });
   });
@@ -241,22 +248,28 @@ function render() {
   var tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
 
+  // Find max rate for scaling the bar
+  var maxRate = Math.max.apply(null, rows.map(function(r) { return r.rate; })) || 1;
+
   rows.forEach(function(r) {
     var tr = document.createElement('tr');
     var arrow = expandedCoach === r.id ? '&#9660; ' : '&#9654; ';
+    var barWidth = maxRate > 0 ? Math.round((r.rate / maxRate) * 100) : 0;
+    var rateColor = r.rate >= 30 ? '#2d9a4e' : r.rate >= 15 ? '#ea580c' : '#888';
     tr.innerHTML = '<td><span class="expand-btn" data-coach="' + r.id + '">' + arrow + esc(r.name) + '</span></td>'
       + '<td>' + r.students + '</td>'
       + '<td>' + (r.so || '-') + '</td>'
       + '<td>' + (r.stam || '-') + '</td>'
       + '<td>' + (r.ay || '-') + '</td>'
-      + '<td>' + (r.any || '-') + '</td>';
+      + '<td>' + (r.any || '-') + '</td>'
+      + '<td class="rate-cell"><div class="rate-bar-bg"><div class="rate-bar" style="width:' + barWidth + '%;background:' + rateColor + '"></div></div><span class="rate-val">' + r.rate + '%</span></td>';
     tbody.appendChild(tr);
 
     if (expandedCoach === r.id) {
       var detailTr = document.createElement('tr');
       detailTr.className = 'student-detail';
       var detailTd = document.createElement('td');
-      detailTd.colSpan = 6;
+      detailTd.colSpan = 7;
       if (r.details.length === 0) {
         detailTd.innerHTML = '<div class="student-list"><em>No students meet the minimum meeting threshold.</em></div>';
       } else {
@@ -281,7 +294,8 @@ function render() {
   // Totals row
   var totTr = document.createElement('tr');
   totTr.className = 'totals';
-  totTr.innerHTML = '<td>TOTAL (de-duplicated)</td><td>' + totals.students + '</td><td>' + totals.so + '</td><td>' + totals.stam + '</td><td>' + totals.ay + '</td><td>' + totals.any + '</td>';
+  var totalRate = totals.students > 0 ? Math.round((totals.any / totals.students) * 100) : 0;
+  totTr.innerHTML = '<td>TOTAL (de-duplicated)</td><td>' + totals.students + '</td><td>' + totals.so + '</td><td>' + totals.stam + '</td><td>' + totals.ay + '</td><td>' + totals.any + '</td><td>' + totalRate + '%</td>';
   tbody.appendChild(totTr);
 }
 
