@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+data_relationships.json
+data_outcomes.json
+dashboard_data.json
+student_id_batches.json
+missing_student_batches.json
+.claude/
